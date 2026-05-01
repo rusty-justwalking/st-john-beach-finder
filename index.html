@@ -82,6 +82,27 @@
       gap: 12px;
       position: relative;
       z-index: 1;
+      align-items: center;
+    }
+
+    .condition-title {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(255,255,255,.85);
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 850;
+      box-shadow: 0 10px 24px rgba(0, 55, 75, .12);
+    }
+
+    .small-refresh {
+      background: rgba(6,70,92,.92);
+      padding: 10px 14px;
+      font-size: .92rem;
     }
 
     button, .map-link {
@@ -121,7 +142,7 @@
 
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -131,6 +152,32 @@
       padding: 16px;
       min-height: 88px;
     }
+
+
+    .stat.best-pick {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #06465c, #0677a1 55%, #18b7b5);
+      color: white;
+      min-height: 132px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat.best-pick:after {
+      content: "🌊";
+      position: absolute;
+      right: 22px;
+      bottom: 12px;
+      font-size: 4.5rem;
+      opacity: .16;
+    }
+
+    .stat.best-pick .label { opacity: .9; }
+    .stat.best-pick .value { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1; }
+    .stat.best-pick .best-reason { margin-top: 12px; font-weight: 700; opacity: .95; max-width: 720px; }
 
     .label { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; opacity: .7; font-weight: 800; }
     .value { font-size: 1.28rem; font-weight: 850; margin-top: 5px; }
@@ -211,20 +258,25 @@
   <main class="shell">
     <section class="hero">
       <h1>St. John Beach Finder</h1>
-      <p class="subtitle">Find the best beach today based on wind direction, wind speed, likely calm water, and your St. John beach comfort rules.</p>
+      <p class="subtitle">Find the best beach today based on St. John wind direction, wind speed, and likely protected water.</p>
       <div class="controls">
-        <button id="refreshBtn">Use live St. John weather</button>
-        <button class="secondary" id="locationBtn">Use my location</button>
+        <div class="condition-title">🌴 Today’s St. John Conditions</div>
+        <button class="small-refresh" id="refreshBtn">Refresh conditions</button>
       </div>
-      <div id="status" class="status">Loading current St. John conditions...</div>
+      <div id="status" class="status">Loading today’s St. John conditions...</div>
     </section>
 
     <section class="grid">
       <div>
         <div class="panel">
           <div class="summary-grid">
-            <div class="stat"><div class="label">Today’s Best Beach</div><div class="value" id="bestBeach">Checking...</div></div>
+            <div class="stat best-pick">
+              <div class="label">Today’s Best Beach</div>
+              <div class="value" id="bestBeach">Checking...</div>
+              <div class="best-reason" id="bestReason">Checking today’s wind and beach protection...</div>
+            </div>
             <div class="stat"><div class="label">Wind</div><div class="value" id="windText">Checking...</div></div>
+            <div class="stat"><div class="label">UV Forecast</div><div class="value" id="uvText">Checking...</div></div>
             <div class="stat"><div class="label">Sunrise</div><div class="value" id="sunriseText">Checking...</div></div>
             <div class="stat"><div class="label">Sunset</div><div class="value" id="sunsetText">Checking...</div></div>
           </div>
@@ -245,7 +297,7 @@
 
       <aside>
         <iframe id="mapFrame" class="map-frame" loading="lazy"></iframe>
-        <div class="note">Conditions can change quickly. Use this as a planning guide and check local signs, surf, currents, and safety conditions before entering the water.</div>
+        <div class="note">Conditions can change quickly. This app uses wind speed and wind direction to estimate which beaches are most protected. It does not currently use live wave height or swell data, so it should not claim exact water conditions. UV forecast is a planning guide, so use reef-safe mineral sunscreen and reapply often. Always check local signs, surf, currents, and safety conditions before entering the water. Check road and rental restrictions before visiting remote South Shore beaches like Lameshur.</div>
       </aside>
     </section>
   </main>
@@ -260,7 +312,7 @@
       "Maho Bay": { lat: 18.3624, lon: -64.7446, note: "Often one of the calmest protected choices, especially for snorkeling." },
       "Francis Bay": { lat: 18.3636, lon: -64.7421, note: "Protected North Shore option when wind is stronger." },
       "Salt Pond": { lat: 18.3087, lon: -64.7076, note: "South Shore option when north winds make North Shore less ideal." },
-      "Lameshur": { lat: 18.3192, lon: -64.7230, note: "South Shore option, but check road and rental restrictions before driving." }
+      "Lameshur": { lat: 18.3192, lon: -64.7230, note: "South Shore option. Important: check road conditions and rental car restrictions before going. Some rentals prohibit driving to Lameshur." }
     };
 
     function degreesToCompass(deg) {
@@ -269,9 +321,15 @@
     }
 
     function normalizeDirection(dir) {
-      if (["E", "ENE", "NE", "ESE", "NNE"].includes(dir)) return "E_GROUP";
-      if (["S", "SE", "SW", "SSE", "SSW", "WSW"].includes(dir)) return "S_GROUP";
-      if (["N", "NW", "NNW", "WNW"].includes(dir)) return "N_GROUP";
+      // Keep this tight to the original St. John beach logic.
+      // ESE, SSE, SSW, WSW, W, WNW, NNW, and NNE are treated by nearest practical group below.
+      if (["E", "ENE", "NE"].includes(dir)) return "E_GROUP";
+      if (["S", "SE", "SW"].includes(dir)) return "S_GROUP";
+      if (["N", "NW"].includes(dir)) return "N_GROUP";
+      if (["ESE", "SSE"].includes(dir)) return "S_GROUP";
+      if (["NNE"].includes(dir)) return "E_GROUP";
+      if (["NNW", "WNW"].includes(dir)) return "N_GROUP";
+      if (["SSW", "WSW", "W"].includes(dir)) return "S_GROUP";
       return "E_GROUP";
     }
 
@@ -282,29 +340,71 @@
       let avoid = [];
 
       if (speed <= 10) {
-        condition = "Light wind. Very calm water, but bugs may be more noticeable late in the day.";
+        condition = "Light wind. Likely calm and clearer water, but bugs may be more noticeable late in the day.";
         if (group === "E_GROUP") recommendations = ["Hawksnest", "Trunk Bay", "Cinnamon Bay", "Maho Bay"];
         if (group === "S_GROUP") recommendations = ["Hawksnest", "Trunk Bay", "Cinnamon Bay"];
         if (group === "N_GROUP") recommendations = ["Salt Pond", "Lameshur"];
         avoid = ["Maho Bay late afternoon", "Salt Pond late afternoon"];
       } else if (speed <= 15) {
-        condition = "Ideal conditions. Best balance of clear water and steady breeze.";
+        condition = "Ideal conditions. Best balance for calm and likely clearer water with a steady breeze.";
         if (group === "E_GROUP") recommendations = ["Hawksnest", "Trunk Bay", "Maho Bay", "Cinnamon Bay"];
         if (group === "S_GROUP") recommendations = ["Hawksnest", "Trunk Bay", "Maho Bay"];
         if (group === "N_GROUP") recommendations = ["Salt Pond"];
       } else if (speed <= 20) {
-        condition = "Moderate wind. Choose more protected beaches.";
+        condition = "Moderate wind. Choose more protected beaches for calmer and likely clearer water.";
         if (group === "E_GROUP") recommendations = ["Maho Bay", "Francis Bay", "Cinnamon Bay"];
         if (group === "S_GROUP") recommendations = ["Maho Bay", "Hawksnest"];
         if (group === "N_GROUP") recommendations = ["Salt Pond", "Lameshur"];
       } else {
-        condition = "Strong wind. Exposed water may be rough or choppy.";
+        condition = "Strong wind. Exposed water may be rough, choppy, and less clear.";
         if (group === "E_GROUP") recommendations = ["Maho Bay", "Francis Bay"];
         if (group === "S_GROUP") recommendations = ["Maho Bay", "Hawksnest"];
         if (group === "N_GROUP") recommendations = ["Salt Pond", "Lameshur"];
       }
 
       return { condition, recommendations, avoid };
+    }
+
+
+    function uvLabel(uv) {
+      if (uv == null || Number.isNaN(uv)) return "Unavailable";
+      if (uv <= 2) return `${Math.round(uv)} Low`;
+      if (uv <= 5) return `${Math.round(uv)} Moderate`;
+      if (uv <= 7) return `${Math.round(uv)} High`;
+      if (uv <= 10) return `${Math.round(uv)} Very High`;
+      return `${Math.round(uv)} Extreme`;
+    }
+
+    function waterConditionLabel(speed) {
+      if (speed <= 10) return "Calm and likely clearer";
+      if (speed <= 15) return "Mostly calm and clear";
+      if (speed <= 20) return "Light to moderate chop";
+      return "Choppy at exposed beaches";
+    }
+
+    function beachComfortScore(speed, recommendations) {
+      let score = 10;
+      if (speed > 10 && speed <= 15) score = 9;
+      if (speed > 15 && speed <= 20) score = 7;
+      if (speed > 20) score = 5;
+      const top = recommendations[0] || "";
+      if (["Maho Bay", "Francis Bay", "Hawksnest"].includes(top) && speed >= 15) score += 1;
+      return Math.max(1, Math.min(10, score));
+    }
+
+    function comfortMessage(score) {
+      if (score >= 9) return `${score}/10 Excellent`;
+      if (score >= 7) return `${score}/10 Good`;
+      if (score >= 5) return `${score}/10 Fair`;
+      return `${score}/10 Use caution`;
+    }
+
+    function reasonForBeach(name, index, result) {
+      const base = index === 0 ? result.condition : beaches[name].note;
+      if (name === "Lameshur") {
+        return ` Check road conditions and rental restrictions before going.`;
+      }
+      return base;
     }
 
     function formatTime(dateString) {
@@ -334,12 +434,14 @@
     }
 
     function render(data) {
-      const { speed, dir, sunrise, sunset } = data;
+      const { speed, dir, sunrise, sunset, uv } = data;
       const result = recommendBeaches(speed, dir);
       const best = result.recommendations[0] || "Check local conditions";
 
       document.getElementById("bestBeach").textContent = best;
+      document.getElementById("bestReason").textContent = result.condition;
       document.getElementById("windText").textContent = `${Math.round(speed)} mph from ${dir}`;
+      document.getElementById("uvText").textContent = uvLabel(uv);
       document.getElementById("sunriseText").textContent = formatTime(sunrise);
       document.getElementById("sunsetText").textContent = formatTime(sunset);
 
@@ -356,7 +458,7 @@
         card.innerHTML = `
           <span class="rank">#${index + 1} Pick</span>
           <h3>${name}</h3>
-          <p>${index === 0 ? result.condition : b.note}</p>
+          <p>${reasonForBeach(name, index, result)}</p>
           <a class="map-link" href="${directionsUrl(name)}" target="_blank" rel="noopener">Open in Google Maps</a>
         `;
         cards.appendChild(card);
@@ -370,13 +472,13 @@
       }
 
       updateMap(result.recommendations);
-      document.getElementById("status").textContent = "Updated with current conditions.";
+      document.getElementById("status").textContent = "Updated with today’s St. John conditions.";
     }
 
     async function loadWeather(lat = ST_JOHN.lat, lon = ST_JOHN.lon) {
       document.getElementById("status").textContent = "Getting live weather...";
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&timezone=auto&wind_speed_unit=mph&forecast_days=1`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset,uv_index_max&timezone=auto&wind_speed_unit=mph&forecast_days=1`;
         const res = await fetch(url);
         if (!res.ok) throw new Error("Weather request failed");
         const json = await res.json();
@@ -384,38 +486,23 @@
         const dir = degreesToCompass(json.current.wind_direction_10m);
         const sunrise = json.daily.sunrise[0];
         const sunset = json.daily.sunset[0];
-        render({ speed, dir, sunrise, sunset });
+        const uv = json.daily.uv_index_max ? json.daily.uv_index_max[0] : null;
+        render({ speed, dir, sunrise, sunset, uv });
       } catch (err) {
         document.getElementById("status").textContent = "Could not load live weather. Using sample St. John conditions.";
         const today = new Date();
         const date = today.toISOString().slice(0,10);
-        render({ speed: 12, dir: "E", sunrise: `${date}T05:45`, sunset: `${date}T18:45` });
+        render({ speed: 12, dir: "E", sunrise: `${date}T05:45`, sunset: `${date}T18:45`, uv: 9 });
       }
     }
 
     document.getElementById("refreshBtn").addEventListener("click", () => loadWeather());
 
-    document.getElementById("locationBtn").addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        document.getElementById("status").textContent = "Location is not supported by this browser. Using St. John.";
-        loadWeather();
-        return;
-      }
-      document.getElementById("status").textContent = "Requesting your location...";
-      navigator.geolocation.getCurrentPosition(
-        pos => loadWeather(pos.coords.latitude, pos.coords.longitude),
-        () => {
-          document.getElementById("status").textContent = "Location not allowed. Using St. John.";
-          loadWeather();
-        }
-      );
-    });
-
     document.getElementById("manualBtn").addEventListener("click", () => {
       const speed = Number(document.getElementById("manualSpeed").value || 0);
       const dir = document.getElementById("manualDirection").value || "E";
       const today = new Date().toISOString().slice(0,10);
-      render({ speed, dir, sunrise: `${today}T05:45`, sunset: `${today}T18:45` });
+      render({ speed, dir, sunrise: `${today}T05:45`, sunset: `${today}T18:45`, uv: 9 });
       document.getElementById("status").textContent = "Showing manual test conditions.";
     });
 

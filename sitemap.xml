@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Main Pages -->
+  <url>
+    <loc>https://stjohn.justwalking.com/</loc>
+  </url>
+  <url>
+    <loc>https://stjohn.justwalking.com/beaches.html</loc>
+  </url>
+  <url>
+    <loc>https://stjohn.justwalking.com/trails.html</loc>
+  </url>
+
+  <!-- Beach Pages -->
+  <url><loc>https://stjohn.justwalking.com/beach-trunk-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-hawksnest.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-cinnamon-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-maho-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-honeymoon.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-francis-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-salomon.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-waterlemon.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-salt-pond.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-hansen-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/beach-lameshur.html</loc></url>
+
+  <!-- Trail Pages -->
+  <url><loc>https://stjohn.justwalking.com/trail-ram-head.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-reef-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-lind-point.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-caneel-hill.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-francis-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-cinnamon-bay.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-salt-pond.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-yawzi-point.html</loc></url>
+  <url><loc>https://stjohn.justwalking.com/trail-tektite.html</loc></url>
+
+</urlset>
